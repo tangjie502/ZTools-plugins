@@ -23,6 +23,11 @@ const showPrevNext = ref(false);
 const rotation = ref(0);
 const mirror = ref(false);
 const scale = ref(1);
+const isDragging = ref(false);
+const dragStartX = ref(0);
+const dragStartY = ref(0);
+const imageX = ref(0);
+const imageY = ref(0);
 const switchTab = (tab) => {
   currentTab.value = tab
 }
@@ -35,6 +40,8 @@ const openPreview = (index) => {
   rotation.value = 0;
   mirror.value = false;
   scale.value = 1;
+  imageX.value = 0;
+  imageY.value = 0;
 }
 
 const openPreviewCover = (url) => {
@@ -44,6 +51,8 @@ const openPreviewCover = (url) => {
   rotation.value = 0;
   mirror.value = false;
   scale.value = 1;
+  imageX.value = 0;
+  imageY.value = 0;
 }
 
 const closePreview = () => {
@@ -53,16 +62,22 @@ const closePreview = () => {
   rotation.value = 0;
   mirror.value = false;
   scale.value = 1;
+  imageX.value = 0;
+  imageY.value = 0;
 }
 
 const prevImage = () => {
   currentImageIndex.value = currentImageIndex.value > 0 ? currentImageIndex.value - 1 : detailInfo.value.pics.length - 1;
   previewImage.value = detailInfo.value.pics[currentImageIndex.value].url;
+  imageX.value = 0;
+  imageY.value = 0;
 }
 
 const nextImage = () => {
   currentImageIndex.value = currentImageIndex.value < detailInfo.value.pics.length - 1 ? currentImageIndex.value + 1 : 0;
   previewImage.value = detailInfo.value.pics[currentImageIndex.value].url;
+  imageX.value = 0;
+  imageY.value = 0;
 }
 
 const rotateImage = () => {
@@ -80,6 +95,24 @@ const handleWheel = (event) => {
   scale.value = Math.max(0.1, Math.min(3, scale.value + delta));
 }
 
+const startDrag = (event) => {
+  if (!showPreview.value) return;
+  isDragging.value = true;
+  dragStartX.value = event.clientX - imageX.value;
+  dragStartY.value = event.clientY - imageY.value;
+  event.preventDefault();
+}
+
+const drag = (event) => {
+  if (!isDragging.value || !showPreview.value) return;
+  imageX.value = event.clientX - dragStartX.value;
+  imageY.value = event.clientY - dragStartY.value;
+}
+
+const stopDrag = () => {
+  isDragging.value = false;
+}
+
 const handleKeydown = (event) => {
   if (!showPreview.value) return;
   if (event.key === 'ArrowLeft') {
@@ -93,10 +126,14 @@ const handleKeydown = (event) => {
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('mouseup', stopDrag);
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
+  document.removeEventListener('mousemove', drag);
+  document.removeEventListener('mouseup', stopDrag);
 })
 
 const platformList = [
@@ -109,6 +146,11 @@ const platformList = [
     id: 'xiaohongshu',
     name: '小红书',
     content: '估计后面会搓个手书吧 @RURU_茹. http://xhslink.com/o/9JV5cmmuOzg 复制后打开【小红书】查看笔记！【PS: 给妹妹个引流🐒】'
+  },
+  {
+    id: 'jimeng',
+    name: '即梦',
+    content: 'https://jimeng.jianying.com/s/59q6OoJtnok/'
   }
 ]
 
@@ -253,7 +295,7 @@ const download = async (livePhoto) => {
   <!-- 图片预览模态框 -->
   <div v-if="showPreview" class="modal" @click="closePreview">
     <div class="modal-content" @click.stop @wheel="handleWheel">
-      <img :src="previewImage" alt="预览" class="preview-img" :style="{ transform: `scale(${scale}) rotate(${rotation}deg) scaleX(${mirror ? -1 : 1})` }">
+      <img :src="previewImage" alt="预览" class="preview-img" :style="{ transform: `translate(${imageX}px, ${imageY}px) scale(${scale}) rotate(${rotation}deg) scaleX(${mirror ? -1 : 1})`, transition: isDragging ? 'none' : 'transform .3s' }" @mousedown="startDrag" @mousemove="drag" @mouseup="stopDrag" @mouseleave="stopDrag">
       <button class="close-btn" @click="closePreview">×</button>
       <button v-if="showPrevNext" class="nav-btn prev-btn" @click="prevImage">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -353,16 +395,23 @@ const download = async (livePhoto) => {
         display: flex;
         // justify-content: space-between;
         align-items: center;
+        margin: 5px 0;
 
         .platform-item {
-          width: 50px;
-          height: 50px;
+          // width: 50px;
+          // height: 50px;
+          padding: 5px 10px;
           background-color: #fff;
           border-radius: 5px;
           display: flex;
           justify-content: center;
           align-items: center;
           cursor: pointer;
+          transition: background-color 0.3s;
+        }
+
+        .platform-item:hover {
+          background-color: #F5F7FA;
         }
       }
 
@@ -415,7 +464,7 @@ const download = async (livePhoto) => {
   }
   #input {
     width: 100%;
-    height: 100px;
+    height: 120px;
     padding: 10px;
     box-sizing: border-box;
     background-color: #F9FAFB;
@@ -617,7 +666,6 @@ const download = async (livePhoto) => {
     max-height: 80vh;
     border-radius: 5px;
     object-fit: contain;
-    transition: all .3s;
   }
 
   .close-btn {
