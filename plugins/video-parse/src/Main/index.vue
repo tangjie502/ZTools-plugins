@@ -104,6 +104,11 @@ const platformList = [
     id: 'douyin',
     name: '抖音',
     content: '1.53 L@J.II 08/21 TlP:/ 📍changsha长沙 “湘江北去，橘子洲头”# 旅行推荐官 # 长沙 # 橘子洲头  https://v.douyin.com/6Spq1X9ay0o/ 复制此链接，打开Dou音搜索，直接观看视频！',
+  },
+  {
+    id: 'xiaohongshu',
+    name: '小红书',
+    content: '估计后面会搓个手书吧 @RURU_茹. http://xhslink.com/o/9JV5cmmuOzg 复制后打开【小红书】查看笔记！【PS: 给妹妹个引流🐒】'
   }
 ]
 
@@ -134,14 +139,47 @@ const showError = (message) => {
   }, 3000); 
 }
 
-const copyText = () => {
+const copyText = (livePhoto) => {
   // TODO 暂时不考虑livePhoto
-  const text = previewImage.value;
-  navigator.clipboard.writeText(text);
+  if (livePhoto) {
+    navigator.clipboard.writeText(livePhoto);
+  } else {
+    navigator.clipboard.writeText(previewImage.value);
+  }
 }
 
-const testPlatform = () => { 
-  content.value = platformList[0].content;
+const testPlatform = (index) => { 
+  content.value = platformList[index].content;
+}
+
+const playLivePhoto = (index) => {
+  document.querySelector('#livePhoto' + index).play();
+}
+
+// 下载加载
+const picLoading = ref(false);
+const livePhotoLoading = ref(false);
+
+const download = async (livePhoto) => {
+  let url;
+  let type = livePhoto ? 'video' : 'pic';
+  if (livePhoto) {
+    livePhotoLoading.value = true;
+    url = livePhoto;
+  } else {
+    picLoading.value = true;
+    url = previewImage.value;
+  }
+  const res = await window.services.downloadVideo(url, type);
+  console.log(res);
+  if (res) {
+    window.utools.shellShowItemInFolder(res);
+    if (livePhoto) {
+      livePhotoLoading.value = false;
+    } else {
+      picLoading.value = false;
+    }
+  }
 }
 </script>
 <template>
@@ -153,7 +191,7 @@ const testPlatform = () => {
           <div class="error">{{ errTip }}</div>
         </div>
         <!-- 声明 -->
-        <div class="main-card-desc">声明：本工具仅用于学习，请勿用于商业用途。</div>
+        <div class="main-card-desc">本工具仅用于学习交流，请勿用于商业用途。</div>
         <textarea v-model="content" name="ipt" id="input" placeholder="在此粘贴视频分享链接..."></textarea>
         <button class="parse-btn" :disabled="loading" @click="parseInfo">
           <svg v-if="!loading" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search w-4 h-4" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
@@ -161,11 +199,9 @@ const testPlatform = () => {
           {{ loading ? '解析中...' : '开始解析' }}
         </button>
         <div class="platform">
-          <div class="platform-item" @click="testPlatform">抖音</div>
-          <div class="platform-item">小红书</div>
-          <div class="platform-item">最右</div>
-          <div class="platform-item">即梦</div>
-          <div class="platform-item">B站</div>
+          <div v-for="(item, index) in platformList" :key="index" class="platform-item" @click="testPlatform(index)">
+            {{ item.name }}
+          </div>
         </div>
         <div class="parse-info" v-if="detailInfo">
           <!-- 头像、名字 -->
@@ -176,6 +212,9 @@ const testPlatform = () => {
           <!-- 文案 -->
           <div class="title-text">{{ detailInfo.title }}</div>
         </div>
+        <!-- <button class="setting-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings w-5 h-5" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </button> -->
       </div>
       <div class="right">
         <div class="detail-info" v-if="detailInfo">
@@ -184,7 +223,16 @@ const testPlatform = () => {
           </div>
           <div v-show="currentTab === 'pic'" class="pic-list">
             <div class="pic-item-wrapper" v-for="(item, index) in detailInfo.pics" :key="index">
-              <img class="pic-item" :src="item.url" alt="图集" @click="openPreview(index)">
+              <video v-if="item.livePhotoUrl" autoplay :id="'livePhoto' + index" class="pic-item video-item" :src="item.livePhotoUrl"></video>
+              <img v-else class="pic-item" :src="item.url" alt="图集" @click="openPreview(index)">
+              <div class="live-photo-tip" v-if="item.livePhotoUrl" @click="playLivePhoto(index)">
+                Live
+              </div>
+              <!-- 保存、复制 -->
+              <div v-if="item.livePhotoUrl" class="save-and-copy">
+                <div class="save-btn" @click="download(item.livePhotoUrl)">保存</div>
+                <div class="copy-btn" @click="copyText(item.livePhotoUrl)">复制</div>
+              </div>
             </div>
           </div>
           <!-- 封面 -->
@@ -242,7 +290,7 @@ const testPlatform = () => {
             <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
           </svg>
         </button>
-        <button class="tool-btn" title="下载">
+        <button class="tool-btn" :disabled="picLoading" @click="download()" title="下载">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7,10 12,15 17,10"/>
@@ -278,6 +326,7 @@ const testPlatform = () => {
       border-bottom-left-radius: $radius;
       border-right: 1px solid #EBEEF5;
       padding: 20px;
+      position: relative;
 
       .main-card-title {
         font-size: 20px;
@@ -302,7 +351,7 @@ const testPlatform = () => {
 
       .platform {
         display: flex;
-        justify-content: space-between;
+        // justify-content: space-between;
         align-items: center;
 
         .platform-item {
@@ -450,14 +499,57 @@ const testPlatform = () => {
 
   .pic-list {
     height: calc($card-height - 80px);
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 100px);
     gap: 10px;
     margin-top: 80px;
     overflow: auto;
+    align-content: flex-start;
     .pic-item-wrapper {
       position: relative;
+
+      .live-photo-tip {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background-color: rgba(0, 0, 0, 1);
+        border-radius: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #fff;
+        padding: 2px 5px;
+        font-size: 10px;
+        cursor: pointer;
+      }
+
+      .video-item:hover {
+        opacity: 1;
+        cursor: auto;
+      }
+
+      .save-and-copy {
+        width: 100%;
+        position: absolute;
+        bottom: 4px;
+        left: 0;
+        border-bottom-left-radius: 5px;
+        border-bottom-right-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 5px;
+        // 从上到下渐变
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.5) 100%);
+        // background-color: rgba(0, 0, 0, 0.5);
+        color: #fff;
+        font-size: 12px;
+
+        .save-btn, .copy-btn {
+          padding: 2px 5px;
+          cursor: pointer;
+        }
+      }
     }
 
     .pic-item {
@@ -615,5 +707,31 @@ const testPlatform = () => {
 
   .tool-btn:hover {
     background-color: rgba(0, 0, 0, 1);
+  }
+
+  .tool-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .setting-btn {
+    background-color: transparent;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.3s;
+    color: #94a3b8;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+  }
+
+  .setting-btn:hover {
+    background-color: #e5e7eb;
+    color: #001428;
   }
 </style>

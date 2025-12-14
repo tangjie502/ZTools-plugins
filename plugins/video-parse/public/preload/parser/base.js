@@ -1,5 +1,18 @@
 const https = require('https');
 const urlModule = require('url');
+
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+  'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:89.0) Gecko/20100101 Firefox/89.0'
+]
+
+function getRandomUserAgent() {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
 /**
  * 获取重定向URL
  * @param {string} originalUrl 原始URL
@@ -12,7 +25,7 @@ function getRedirectUrl(originalUrl, userAgent) {
     const options = {
       hostname: url.hostname,
       path: url.pathname + url.search,
-      method: 'HEAD', // 使用HEAD请求获取重定向信息
+      method: 'GET', // 使用HEAD请求获取重定向信息
       headers: {
         'User-Agent': userAgent
       }
@@ -35,6 +48,15 @@ function getRedirectUrl(originalUrl, userAgent) {
   });
 }
 
+/**
+ * 链接转换
+ * @param {string} url 链接
+ * @return 转换后的链接(http => https，若是https则返回原链接)
+ */
+function convertUrl(url) {
+  return url.replace('http:', 'https:');
+}
+
 class Video {
   constructor(videoId, title, downloadUrl, cover, pics, author) {
     this.videoId = videoId;
@@ -46,4 +68,4 @@ class Video {
   }
 }
 
-module.exports = { getRedirectUrl, Video };
+module.exports = { getRedirectUrl, Video, convertUrl, getRandomUserAgent };

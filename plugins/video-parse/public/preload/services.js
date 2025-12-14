@@ -22,6 +22,31 @@ window.services = {
     fs.writeFileSync(filePath, base64Url.substring(matchs[0].length), { encoding: 'base64' })
     return filePath
   },
+  // 下载视频到本地下载目录
+  async downloadVideo (url, type = 'pic') {
+    const https = require('https');
+    const fs = require('fs');
+    return new Promise((resolve, reject) => {
+      // 从URL提取文件名，如果没有则使用时间戳
+      let filename = '';
+      if (!filename || filename === '/') {
+        filename = Date.now().toString() + (type === 'video' ? '.mp4' : '.jpg');
+      }
+      const filePath = path.join(window.utools.getPath('downloads'), filename);
+      
+      const file = fs.createWriteStream(filePath);
+      https.get(url, (response) => {
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          resolve(filePath);
+        });
+      }).on('error', (err) => {
+        fs.unlink(filePath, () => {});
+        reject(err);
+      });
+    });
+  },
   parseInfo (sharedUrl) {
     return parseInfo(sharedUrl);
   },
