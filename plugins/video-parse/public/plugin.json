@@ -1,0 +1,18 @@
+{
+  "main": "index.html",
+  "preload": "preload/services.js",
+  "logo": "logo.png",
+  "development": {
+    "main": "http://localhost:5173"
+  },
+  "features": [
+    {
+      "code": "parse",
+      "explain": "视频去水印",
+      "cmds": [
+        "去水印",
+        "轻溪"
+      ]
+    }
+  ]
+}

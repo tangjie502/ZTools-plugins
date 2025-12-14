@@ -1,0 +1,604 @@
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
+
+defineProps({
+  enterAction: {
+    type: Object,
+    default: () => ({})
+  }
+})
+
+const currentTab = ref('video') // 默认显示视频
+
+const content = ref('');
+
+const detailInfo = ref(null);
+const loading = ref(false);
+const errTip = ref('');
+
+const previewImage = ref('');
+const showPreview = ref(false);
+const currentImageIndex = ref(0);
+const showPrevNext = ref(false);
+const rotation = ref(0);
+const mirror = ref(false);
+const switchTab = (tab) => {
+  currentTab.value = tab
+}
+
+const openPreview = (index) => {
+  currentImageIndex.value = index;
+  previewImage.value = detailInfo.value.pics[index].url;
+  showPreview.value = true;
+  showPrevNext.value = detailInfo.value.pics.length > 1;
+  rotation.value = 0;
+  mirror.value = false;
+}
+
+const openPreviewCover = (url) => {
+  previewImage.value = url;
+  showPreview.value = true;
+  showPrevNext.value = false;
+  rotation.value = 0;
+  mirror.value = false;
+}
+
+const closePreview = () => {
+  showPreview.value = false;
+  previewImage.value = '';
+  currentImageIndex.value = 0;
+  rotation.value = 0;
+  mirror.value = false;
+}
+
+const prevImage = () => {
+  currentImageIndex.value = currentImageIndex.value > 0 ? currentImageIndex.value - 1 : detailInfo.value.pics.length - 1;
+  previewImage.value = detailInfo.value.pics[currentImageIndex.value].url;
+}
+
+const nextImage = () => {
+  currentImageIndex.value = currentImageIndex.value < detailInfo.value.pics.length - 1 ? currentImageIndex.value + 1 : 0;
+  previewImage.value = detailInfo.value.pics[currentImageIndex.value].url;
+}
+
+const rotateImage = () => {
+  rotation.value = (rotation.value + 90) % 360;
+}
+
+const mirrorImage = () => {
+  mirror.value = !mirror.value;
+}
+
+const handleKeydown = (event) => {
+  if (!showPreview.value) return;
+  if (event.key === 'ArrowLeft') {
+    prevImage();
+  } else if (event.key === 'ArrowRight') {
+    nextImage();
+  } else if (event.key === 'Escape') {
+    closePreview();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown);
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+})
+
+const platformList = [
+  {
+    id: 'douyin',
+    name: '抖音',
+    content: '1.53 L@J.II 08/21 TlP:/ 📍changsha长沙 “湘江北去，橘子洲头”# 旅行推荐官 # 长沙 # 橘子洲头  https://v.douyin.com/6Spq1X9ay0o/ 复制此链接，打开Dou音搜索，直接观看视频！',
+  }
+]
+
+const parseInfo = async () => {
+  if (!content.value) return;
+  // 解析出content中的url
+  const url = content.value.match(/http[s]?:\/\/[^\s]+/)[0];
+  console.log(url);
+  if (!url) return;
+  loading.value = true;
+  try {
+    const info = await window.services.parseInfo(url);
+    console.log(info);
+    detailInfo.value = info;
+    currentTab.value = info.downloadUrl ? 'video' : 'pic';
+    loading.value = false;
+  } catch (e) {
+    console.log(e.message);
+    loading.value = false;
+    showError(e.message);
+  }
+}
+
+const showError = (message) => {
+  errTip.value = message;
+  setTimeout(() => {
+    errTip.value = '';
+  }, 3000); 
+}
+
+const copyText = () => {
+  // TODO 暂时不考虑livePhoto
+  const text = previewImage.value;
+  navigator.clipboard.writeText(text);
+}
+
+const testPlatform = () => { 
+  content.value = platformList[0].content;
+}
+</script>
+<template>
+  <div class="main">
+    <div class="main-card">
+      <div class="left">
+        <div class="main-card-title">
+          轻溪去水印
+          <div class="error">{{ errTip }}</div>
+        </div>
+        <!-- 声明 -->
+        <div class="main-card-desc">声明：本工具仅用于学习，请勿用于商业用途。</div>
+        <textarea v-model="content" name="ipt" id="input" placeholder="在此粘贴视频分享链接..."></textarea>
+        <button class="parse-btn" :disabled="loading" @click="parseInfo">
+          <svg v-if="!loading" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search w-4 h-4" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+          <svg v-else t="1765683055654" class="icon loading" viewBox="0 0 1024 1024" fill="currentColor" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="12849" width="15" height="15"><path d="M469.333333 128a42.666667 42.666667 0 0 1 42.666667-42.666667c235.648 0 426.666667 191.018667 426.666667 426.666667a42.666667 42.666667 0 1 1-85.333334 0 341.333333 341.333333 0 0 0-341.333333-341.333333 42.666667 42.666667 0 0 1-42.666667-42.666667z" p-id="12850"></path></svg>
+          {{ loading ? '解析中...' : '开始解析' }}
+        </button>
+        <div class="platform">
+          <div class="platform-item" @click="testPlatform">抖音</div>
+          <div class="platform-item">小红书</div>
+          <div class="platform-item">最右</div>
+          <div class="platform-item">即梦</div>
+          <div class="platform-item">B站</div>
+        </div>
+        <div class="parse-info" v-if="detailInfo">
+          <!-- 头像、名字 -->
+          <div class="user-info">
+            <img v-if="detailInfo?.author?.avatar" class="avatar" :src="detailInfo?.author?.avatar" alt="头像"></img>
+            <div class="released-info-item-name">{{ detailInfo?.author?.name }}</div>
+          </div>
+          <!-- 文案 -->
+          <div class="main-card-text">{{ detailInfo.title }}</div>
+        </div>
+      </div>
+      <div class="right">
+        <div class="detail-info" v-if="detailInfo">
+          <div v-show="currentTab === 'video'" class="video-wrapper">
+            <video v-if="detailInfo.downloadUrl" class="video" controls :src="detailInfo.downloadUrl"></video>
+          </div>
+          <div v-show="currentTab === 'pic'" class="pic-list">
+            <div class="pic-item-wrapper" v-for="(item, index) in detailInfo.pics" :key="index">
+              <img class="pic-item" :src="item.url" alt="图集" @click="openPreview(index)">
+            </div>
+          </div>
+          <!-- 封面 -->
+          <img v-show="currentTab === 'cover'" class="cover" :src="detailInfo.cover" alt="封面" @click="openPreviewCover(detailInfo.cover)"></img>
+        </div>
+        <div class="right-tip" v-else>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play w-10 h-10 mb-2 opacity-20" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+          预览区域
+        </div>
+        <div class="tab" v-if="detailInfo">
+          <div class="tab-item" v-if="detailInfo.downloadUrl" :class="{ active: currentTab === 'video' }" @click="switchTab('video')">视频预览</div>
+          <div class="tab-item" v-if="detailInfo.pics && detailInfo.pics.length !== 0" :class="{ active: currentTab === 'pic' }" @click="switchTab('pic')">图片预览</div>
+          <div class="tab-item" v-if="detailInfo.cover" :class="{ active: currentTab === 'cover' }" @click="switchTab('cover')">封面预览</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 图片预览模态框 -->
+  <div v-if="showPreview" class="modal" @click="closePreview">
+    <div class="modal-content" @click.stop>
+      <img :src="previewImage" alt="预览" class="preview-img" :style="{ transform: `rotate(${rotation}deg) scaleX(${mirror ? -1 : 1})` }">
+      <button class="close-btn" @click="closePreview">×</button>
+      <button v-if="showPrevNext" class="nav-btn prev-btn" @click="prevImage">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+      <button v-if="showPrevNext" class="nav-btn next-btn" @click="nextImage">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </button>
+      <div class="image-index" v-if="showPrevNext">
+        {{ currentImageIndex + 1 + '/' + detailInfo.pics.length }}
+      </div>
+      <!-- 工具条 -->
+      <div class="toolbar">
+        <button class="tool-btn" @click="rotateImage" title="旋转">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M8 16H3v5"/>
+          </svg>
+        </button>
+        <button class="tool-btn" @click="mirrorImage" title="镜像">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="3" rx="2"/>
+            <line x1="2" x2="22" y1="9" y2="9"/>
+          </svg>
+        </button>
+        <button class="tool-btn" @click="copyText()" title="复制">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+        </button>
+        <button class="tool-btn" title="下载">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+<style lang="scss" scoped>
+  $radius: 10px;
+  $card-height: calc(100vh - 40px - 40px);
+  .main {
+    // width: 100%;
+    height: calc(100vh - 40px);
+    background-color: #F5F7FA;// #F9FAFB
+    padding: 20px;
+  }
+  .main-card {
+    // margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    .left {
+      width: 50%;
+      height: $card-height;
+      background-color: #fff;
+      border-top-left-radius: $radius;
+      border-bottom-left-radius: $radius;
+      border-right: 1px solid #EBEEF5;
+      padding: 20px;
+
+      .main-card-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .error {
+          color: red;
+          font-size: 12px;
+          font-weight: normal;
+        }
+      }
+
+      .main-card-desc {
+        font-size: 12px;
+        color: #909399;
+        margin-bottom: 12px;
+      }
+
+      .platform {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .platform-item {
+          width: 50px;
+          height: 50px;
+          background-color: #fff;
+          border-radius: 5px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          cursor: pointer;
+        }
+      }
+
+      .parse-info {
+        height: 200px;
+        overflow: auto;
+
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 5px;
+
+          .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+          }
+        }
+      }
+    }
+    .right {
+      width: 50%;
+      height: $card-height;
+      background-color: #F5F7FA;
+      border-top-right-radius: $radius;
+      border-bottom-right-radius: $radius;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+
+      .detail-info {
+        height: 100%;
+      }
+
+      .right-tip {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: rgba(0, 0, 0, 0.5);
+        gap: 10px;
+      }
+    }
+  }
+  #input {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    box-sizing: border-box;
+    background-color: #F9FAFB;
+    border: 1px solid #e5e7eb;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: all .3s;
+  }
+  #input:focus {
+    border: 1px solid #1E293B;
+    background-color: #fff;
+    // 黑色阴影
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 1);
+  }
+  .parse-btn {
+    width: 100%;
+    height: 40px;
+    background-color: #0F172A;
+    color: #fff;
+    border-radius: 5px;
+    font-size: 15px;
+    margin-top: 10px;
+    transition: all .3s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+
+  .parse-btn:hover {
+    background-color: #1E293B;
+  }
+
+  .parse-btn:disabled { 
+    background-color: #1E293B;
+    cursor: not-allowed;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .video-wrapper {
+    width: 100%;
+    height: 100%;
+    .video {
+      width: 100%;
+      height: 100%;
+      border-radius: 5px;
+    }
+  }
+
+  .tab {
+    width: 50%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    background-color: #fff;
+    // padding: 5px;
+    position: absolute;
+    border-radius: 5px;
+    top: 30px;
+    left: 25%;
+
+    .tab-item {
+      width: 50%;
+      height: 30px;
+      border-radius: 5px;
+      font-size: 14px;
+      text-align: center;
+      line-height: 30px;
+      color: #1E293B;
+      cursor: pointer;
+      transition: all .3s;
+      margin: 5px;
+    }
+    .active {
+      background-color: #0F172A;
+      color: #fff;
+    }
+  }
+
+  .pic-list {
+    height: calc($card-height - 80px);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 80px;
+    overflow: auto;
+    .pic-item-wrapper {
+      position: relative;
+    }
+
+    .pic-item {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 5px;
+      transition: all .3s;
+      cursor: pointer;
+    }
+
+    .pic-item:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .cover {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 5px;
+    margin-top: 80px;
+    transition: all .3s;
+    cursor: pointer;
+  }
+
+  .cover:hover {
+    opacity: 0.8;
+  }
+
+  .loading {
+    // 旋转
+    animation: spin 0.5s linear infinite;
+  }
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    position: relative;
+    // max-width: 90%;
+    // max-height: 90%;
+  }
+
+  .preview-img {
+    max-width: 80vw;
+    max-height: 80vh;
+    border-radius: 5px;
+    object-fit: contain;
+    transition: all .3s;
+  }
+
+  .close-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 35px;
+    height: 35px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s;
+  }
+
+  .nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 35px;
+    height: 35px;
+    // background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 30px;
+    transition: background-color 0.3s;
+    z-index: 1001;
+  }
+
+  .nav-btn:hover, .close-btn:hover {
+    background-color: rgba(0, 0, 0, 1);
+  }
+
+  .prev-btn {
+    left: 20px;
+  }
+
+  .next-btn {
+    right: 20px;
+  }
+
+  .image-index {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 5px 10px;
+    border-radius: 5px;
+  }
+
+  .toolbar {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1001;
+  }
+
+  .tool-btn {
+    width: 35px;
+    height: 35px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s;
+  }
+
+  .tool-btn:hover {
+    background-color: rgba(0, 0, 0, 1);
+  }
+</style>
