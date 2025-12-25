@@ -72,6 +72,11 @@ const platformList = [
     content: '#最右#分享一条有趣的内容给你，不好看算我输。请戳链接>>https://share.xiaochuankeji.cn/hybrid/share/post?pid=413110582'
   },
   {
+    id: 'kuaishou',
+    name: '快手',
+    content: 'https://www.kuaishou.com/f/X-6S79G8Kibq018N'
+  },
+  {
     id: 'bilibili',
     name: '哔哩哔哩',
     content: '【淀粉肠包蛋 暂时不考虑收徒】 https://www.bilibili.com/video/BV1HD27BNETV/?share_source=copy_web&vd_source=78607971dc08a56a924ddc1a0786ef5f'
