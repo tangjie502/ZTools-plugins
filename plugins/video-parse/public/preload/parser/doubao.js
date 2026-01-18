@@ -4,7 +4,10 @@ const { Video, makeRequest, VideoAuthor } = require('./base');
 // https://www.doubao.com/thread/w4fd0c010d0668f1a 图片1
 // https://www.doubao.com/thread/w21583b263a3723ff 图片2
 // https://www.doubao.com/thread/w92d2f8434076e159
-// TODO 偶尔出现 message_snapshot 获取失败
+
+/**
+ * 豆包解析器(当前只持续图片)
+ */
 class DouBaoParser { 
   /**
    * 解析信息
@@ -40,8 +43,9 @@ class DouBaoParser {
     // 兼容格式
     const pics = [];
     const messageSnapshot = allInfo?.['message_snapshot'] || '';
+    // 偶尔出现 message_snapshot 获取失败
     if (!messageSnapshot) {
-      throw new Error("未找到资源，您可重新尝试一下");
+      throw new Error("哎呀，没有找到资源呢，您要不要重新试试呢");
     }
     const img1ContentStr = messageSnapshot['message_list'][1]['content'];
     const img1Content = JSON.parse(img1ContentStr);
@@ -59,7 +63,10 @@ class DouBaoParser {
       }
       // cover = creations[0]['image']['image_thumb']['url'];
     } else {
-      const taskInfo = img1Content['creation_info']['task_info'];
+      const taskInfo = img1Content?.['creation_info']?.['task_info'];
+      if (!taskInfo) {
+        throw new Error("暂不支持非图片资源");
+      }
       // 取出对象的所有值
       const taskList = Object.values(taskInfo);
       for (const task of taskList) {
